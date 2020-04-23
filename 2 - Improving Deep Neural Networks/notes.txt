@@ -1,0 +1,1106 @@
+Credits:
+    Notes taken from video lectures: deeplearning.ai - Deep Learning Specialization - Course 2
+    author of the notes: Miloš Pivaš
+
+==================================================================================================
+Course 2 : Improving Deep Neural Networks: Hyperparameter Tuning, Regularization and Optimization
+==================================================================================================
+
+==================================================================================================
+============================================ CONTENTS ============================================
+==================================================================================================
+
+    Week 1
+L01 - Train/Dev/Test Sets
+L02 - Bias/Variance
+L03 - Basic Bias/Variance "Recipe" for Machine Learning
+L04 - Regularization
+L05 - Why Regularization Reduces Overfitting
+L06 - Dropout Regularization
+L07 - Understanding Dropout
+L08 - Other regularization methods
+L09 - Normalizing Inputs
+L10 - Vanishing/Exploding Gradients
+L11 - Weight Intitialization for Deep Networks
+L12 - Numerical Approximations of Gradients
+L13 - Gradient Checking
+L14 - Gradient Checking Implementation Notes
+
+    Week 2
+L01 - Mini-Batch Gradient Descent
+L02 - Understanding Mini-Batch Gradient Descent
+L03 - Exponentially Weighted Averages
+L04 - Understanding Exponentially Weighted Averages
+L05 - Bias Correction of Exponentially Weighted Averages
+L06 - Gradient Descent With Momentum
+L07 - RMSProp
+L08 - Adam Optimization Algorithm
+L09 - Learning Rate Decay
+
+    Week 3
+L01 - Tuning process
+L02 - Using an Appropriate Scale
+L03 - Hyperparameters Tuning in Practice: Pandas vs. Caviar
+L04 - Normalizing Activations in a Network
+L05 - Fitting Batch Norm into a Neural Network
+L06 - Why Does Batch Norm Work
+L07 - Batch Norm at Test Time
+L08 - Softmax Regression
+L09 - Training Softmax Classifier
+L10 - The Problem of Local Optima
+L11 - TensorFlow
+
+
+==================================================================================================
+============================================= WEEK 1 =============================================
+==================================================================================================
+
+L01 - Train/Dev/Test Sets
+    Welcome
+    Applied ML is a highly iterative process
+        So many choices...
+            # layers
+            # hidden units
+            learning rates
+            activation functions
+            regularization parameters
+            ...
+        Idea -> Code -> Experiments -> repeat...
+    
+        So many applications...
+            NLP
+            Computer Vision
+            Speech
+            Structured data
+                Ads
+                Search
+                Security
+                Logistics
+                ...
+            ...
+
+        Intuitions don't transfer between different application areas
+    
+    Train/dev/test sets
+        Data:
+            train set
+            hold-out cross validation (dev) set
+            test
+
+        Previously (a few years ago)
+            70/30   - train/test set split
+            60/20/20 - train/dev/test set split
+            these were good rules of thumb
+        
+        But in the modern Big Data era:
+            e.g.
+            if we have a 1.000.000 examples:
+                - we don't need 200.000 examples for dev or test sets!
+                - 10.000 is more than enough for dev or test sets!
+                and that's a 98/1/1 split
+                or it could be 99.5/.4/.1
+                etc...
+    
+    Mismatched train/test distribution
+        Bad!
+
+        e.g.
+            Training set:
+                Cat pictures from webpages
+                    pro camera and editing
+
+            Dev/test sets:
+                Cat pictures from users using our app
+                    shaffordable camera, no editing
+
+        ! ! ! Make sure Dev and Test come from the SAME distribution ! ! ! <<<<<<<<<<<<<<<<<<<<<<<
+
+        Not having a test set might be okay. (Only dev set.)
+            The goal of the test is
+                to have an unbiased estimate of the performance of the model.
+            If we don't need that, it is fine to not have the test set.
+            BUT please don't call the dev set test set.
+            We can't assesss overall performance on the dev set.
+        
+L02 - Bias/Variance
+    Cases:
+        high bias - underfitting
+        "just right"
+        high variance - overfitting
+
+    e.g. binary classification:
+        for reference:
+            Human expert:       0.000...%
+        
+        consider results of the model:
+            1)
+            Train set error:    1%
+            Dev set error:      11%
+                => does good on train, poorly on dev
+                => low bias
+                => high variance
+
+            2)
+            Train set error:    15%
+            Dev set error:      16%
+                => does poorly on both
+                => high bias
+                => low variance
+            
+            3)
+            Train set error:    .5%
+            Dev set error:      1%
+                => does good on both
+                => low bias
+                => low variance
+
+        This analysis is predicated on the assumption that the humman level performance is nearly 0% error.
+        Or that the optimal (Bayes) error is nearly 0%.
+        If the optimal (Bayes) error were 15%, than the 2) case would also have low bias and variance.
+        (and I guess, the 3) case would be considered state of the art black magic)
+
+        The worst case is high bias and high variance, and it's possible in high dimensions.
+
+L03 - Basic Bias/Variance "Recipe" for Machine Learning
+
+    Does our model have high Bias? (training set performance)
+        Y   ->  Bigger network - almost always helps
+                Train longer - doesn't always help
+                (Search for different NN architecture? - last resort, harder)
+        
+        We repeat this untill we are satisfied with low bias.
+        If a human is able to do it, a big enough network should be able to do it.
+
+    | N
+    v
+    We've reduced Bias,
+    High variance? (dev set performance, how does it generalize)
+        Y   ->  More data - best way, if possible
+                Regularization - another good way
+                (Search for different NN architecture? - last resort, harder)
+    | N
+    v
+    Done
+
+    Note that hight bias and high variance are DIFFERENT problems,
+    and require DIFFERENT solutions!
+    e.g. Throwing more data on a model with high bias isn't a solution (at least not the best solution).
+
+    The Bias/Variance tradeoff virtually doesn't exist anymore
+        In the earlier days, we would increase one when we decrease the other.
+        In the modern, Big Data, Deep Learning era,
+            a bigger network (if well regularized) pretty much always, just reduces the bias
+            more data pretty much always just reduces the variance
+    
+        This is a big plus of Deep Learning.
+        The only cost of bigger networks and data is the computation cost
+        which is just getting cheaper over time.
+
+L04 - Regularization
+    Logistic regression refresher:
+        Regularization adds a constraint to the optimization objective to also minimize the weights.
+        Done by adding a term to the cost function J:
+
+            L2 regularization :
+                J := J + Lambda/(2*m) * ||w||_2 ^2
+                    where
+                        ||w||_2 ^2 = sum (w_j^2) = w^T dot w
+                    is the L2 norm
+                
+                L2 is more common.
+
+            L1 regularization :
+                J := J + Lambda/(2*m) * ||w||_1
+                    where
+                        ||w||_1 = sum (|w_j|)
+                    is the L1 norm
+
+                L1 will make w sparse.
+        
+        Lambda is another hyperparameter to be tuned.
+        Note: Lambda is a reserved keyword in Python (Lambda calculus)
+    
+    Neural Networks:
+        J := J + Lambda/(2*m) * sum( || W^[l] ||_F ^2 for l in range(1, L+1))
+            where
+                || W^[l] ||_F ^2 = sum(sum((W_ij^[l])^2 for j in range(n^[l-1])) for i in range(n^[l]))
+                -> sum of squared elements of the matrix
+            is the "Frobenius norm" (L2 norm generalized to matrices)
+
+    Gradient Descent:
+        Gradient compute:
+            dW^[l] = del J/ del W^[l]
+        GD update rule:
+            W^[l] := W^[l] - Alpha * dW^[l]
+
+        with regularization:
+            dW^[l]_reg = dW^[l] + Lambda/m * W^[l]
+        
+        so the GD update rule is now:
+            W^[l] := W^[l] - Alpha * dW^[l]_reg
+            W^[l] := W^[l] - Alpha*Lambda/m * W^[l] - Alpha * dW^[l]
+            W^[l] := (1 - Alpha*Lambda/m) * W^[l] - Alpha * dW^[l]
+                Alpha*Lambda/m > 0
+                1 - Alpha*Lambda/m < 1
+            So it first shrinks W^[l] and then steps down the gradient
+
+        That's why L2 regularization is sometimes called "Weight Decay"
+
+L05 - Why Regularization Reduces Overfitting
+
+    3 cases:
+        high bias
+        just right
+        high variance
+    
+    Cost:
+        J = 1/m * sum( L(y_hat^[i], y^[i]) for i in range(m))
+    Cost with regularization:
+        J_reg = J + Lambda/(2*m) * sum( || W^[l] ||_F ^2 for l in range(1, L+!))
+
+    Intuition 1:
+        Minimizing weights "simplifies" the network:
+            only important weights will be large,
+            less important weights will be close to 0.
+            
+            It is as if we had a smaller network, but with added fine tuned details.
+        and simpler networks have smaller variance.
+    
+    Intuition 2:
+        Suppose we use a non-linear tanh as activation functions.
+
+        - Minimizing weights W^[l],
+        - means that Z^[l] = W^[l] dot A^[l-1] + b^[l] will be closer to 0.
+        - tanh is close to linear around 0.
+        => Minimizing weights leads to more linear function that the network is fitting.
+        => There will be less non-linearity => less variance => less overfitting
+
+    
+    Note: Implementation detail
+        If using regularization, when plotting the learning curves of J values
+        don't forget to plot the actual cost values including the regularization term
+    
+
+    L2 regularization is most commonly used technique, but there is also Dropout Regularization:
+
+L06 - Dropout Regularization
+    Network is overfitting?
+    Dropout:
+        Go through each layer in the network,
+            for each node,
+                have a probability of "dropping out" the node,
+                i.e. cutting out all the edges comming into and out of the node
+    
+    Implementing Dropout ("Inverted Dropout")
+        # Illustration with layer l = 3,
+        # ---> on a single training example
+
+        # probability that a hidden unit will be kept
+        keep_prob = 0.8
+        # and that's another hyperparameter to tune
+
+        # drop out vector for layer 3
+        d3 = np.random.rand(a3.shape[0], a3.shape[1]) < keep_prob
+        # this is intitialized randomly for every training example!!!
+
+        # dropping out the neurons
+        a3 *= d3    # element-wise product
+    
+        # the most important part - inverted Dropout technique:
+        a3 /= keep_prob     # this ensures that the expected value of a3 remains the same
+        # this also makes Test time easier, because we have less of a scaling problem                            
+
+    Making predictions at test time:
+        a0 = x
+        z1 = np.dot(W1, a0) + b1
+        a1 = g1(z1)
+        ...
+        #---> No drop out!!!
+    Don't use drop out at test time!
+    The inverted droupout technique (a /= keep_prob) ensured that the scaling is correct.
+
+L07 - Understanding Dropout
+    Why does Dropout work?
+        Intuition 1:
+            Each time working on a smaller neural network,
+            which should have a regularizing effect.
+        
+        Intuition 2:
+            From the perspective of a single neuron unit:
+                It can't rely on any one feature, since it might be dropped out,
+                so it has to spread out weights.
+                
+                This has a shrinking effect, actually similar to L2 regularization.
+                
+                (It can formally be shown that droput is an adaptive form of L2 regularization,
+                but the L2 penalty is different for different weights, depending on the size of the activations,
+                and the L2 can be even more adaptive.)
+
+                I guess one advantage of Dropout is that it explicitly enforces robustness.
+
+    We can have different keep_prob parameters for different layers:
+        In binaray classfication,
+            for output layer, we can't use Dropout on the output layer, because it is a single neuron
+
+        If we have some layers with many neurons, and some with a few of them,
+            the bigger layers are more likely the ones responsible for overfitting,
+            so we could putt smaller keep_prob for those layers
+
+            The downside of this approach is that there are now even more hyperparameters to tune!
+                A valid alternative would be to choose to use Dropout just on the bigger layers,
+                and use just one keep_prob hyperparameter for all of them.
+        
+        We can use droupout even on the input layer, but this is rarely done.
+
+    In Computer Vision, there is never enough data because it's so high-dimensional (Curse of dimensionality),
+    so overfitting is almost always the problem, so Computer Vision people almost always use droupout,
+    but it is important to remember that intuitions don't generalize well between different applications,
+    and that Dropout is a regularization technique!
+    It is used specifically to prevent overfitting!
+    If we don't have overfitting problems, we shouldn't bother spending time on dropout!
+
+    One disadvantage of Dropout is that the cost function is not well defined,
+    It's really hard to compute the actuall cost function with Dropout.
+    So it's harder to check that the Gradient Descent is performing well via learning curves.
+        What Andrew does is he checks the Gradient Descent curve without Dropout and if it's performing well,
+        then turns on Dropout and hopes that no bugs were introduced, checking the correctness in other ways.
+
+L08 - Other regularization methods
+    Or rather - other cures for overfitting.
+    Data augmentation
+        e.g.
+            if we are training a cat/not-cat classifier
+                - we can flip each picture horizontally and add it to the training set
+                - we can pseudo-randomly rotate or crop the image
+                - we can add random distortions and transformations
+            
+            if we are training a digit classifier
+                we can do all of the above (except for horizontal flipping?)
+
+        This is a very inexpensive way of getting more data.
+
+    Early stopping
+        When training,
+            we plot the cost or the 1/0 error on the training set etc. and that should decrease monotonically,
+            but on the dev set, the error has a local minimum,
+            and that is the point where the model is actually performing the best, so we should stop training there.
+            After that point, the model starts to overfit the data.
+        Why does it work?
+            Training starts with weights W close to 0,
+            and weights (on average) increase over training iterations.
+            Early stopping stops them before they increase too much,
+            and so it has a similar effect as Weight Decay.
+        
+        It does have one downside:
+            Goal of ML
+                - optimize J:
+                    - Gradient Descent, and others (Momentum, RMSProp, Adam...)
+                - not overfit:
+                    - Regularization, More data, ...
+                
+                These two should be separate tasks (Orthogonalization).
+                Early stopping breaks this separation, and litearlly stops GD from doing its job.
+                If we have enough computing resources to try different values for Lambda, we should just use L2.
+
+L09 - Normalizing Inputs
+    Speeds up the training process
+
+    Pretty simple:
+        mu_train = np.mean(X_train)
+        std_train = np.std(X_train)
+        X_train -= mu_train
+        X_train /= std_train
+
+    Make sure to save mu_train and std_train
+    because we'll use them later to scale the dev and test data, as well:
+        X_dev -= mu_train
+        X_dev /= std_train
+        X_test -= mu_train
+        X_test /= std_train
+    
+    Why normalize inputs?
+        Surf/Contour plot of cost functions with Unnormalized vs Normalized data.
+
+L10 - Vanishing/Exploding Gradients
+    For very deep networks, gradients can get very, very small/big gradients.
+
+    e.g.
+        A small, very deep network (2 inputs, 9 hidden layers, two units per layer, 1 output neuron)
+        Let's say we're using g(z) = z, for all layers, and b^[l] = 0
+        
+        a^[L] = W^[L] dot W^[L-1] dot ... dot W^[2] dot W^[1] dot x
+
+        Now let's say that except for W^[L], all W^[l] are equal
+            W   = np.array([[   c,  0],
+                            [   0,  c]])
+                = c * np.eye(2,2)
+        and so:
+            a^[L]   = W^[L] dot W^(L-1) dot x
+                    = W^[L] dot c**(L-1) dot np.eye(2,2) dot x
+                    = c**(L-1) dot W^[L] dot x
+            
+            => a^[L] = O(c**(L))
+                => for large L:
+                    a^[L] will be very small, if c < 1
+                        => the gradients will be very small => slow learning (Vanishing gradient)
+                    a^[L] will be very large, if c > 1
+                        => the gradients will be very large => overshooting, diverging (Exploding gradient)
+
+L11 - Weight Intitialization for Deep Networks
+    Better or more careful intitialization as a possible solution to Vanishing/Exploding gradient
+    e.g. Single neuron:
+    z = w1*x1 + w2*x2 + ... + wn*xn     (b = 0, for now)
+        largeer n => w_i should all be smaller
+    
+    Solution?
+        Set the variance Var(W^[l]) = 2/n^[l-1]   (this works good for ReLU)
+        i.e. set the standard deviation to std(W^[l]) = sqrt(2/n^[l-1])
+
+        Why n^[l-1]? Because:
+            n^[l-1] = # neurons in the previous layer: l-1, i.e.,
+                    # neurons feeding into each neuron in layer l
+        
+        code:
+            W^[l] = np.random.randn(shape) * np.sqrt(2/n^[l-1])
+
+        Other variants:
+            for tanh (Xavier intitialization):
+                std = sqrt(1/n^[l-1])
+        
+            another version (Yoshua Bengio at al.):
+                std = sqrt(2 / (n^[l-1] + n^[l]))
+            
+        Don't worry about this hyperparameter as much.
+
+L12 - Numerical Approximations of Gradients
+    Motivation : Gradient checking
+
+    Two-sided difference as the gradient approximation instead of one-sided:
+        f'(\theta) approx. = (f(\theta + \epsilon) - f(\theta - \epsilon)) / (2 * \epsilon)
+
+        much more accurate approximation
+
+L13 - Gradient Checking
+    Take all W^[l], b^[l] and reshape them all into one big vector \theta
+    and same with the gradients dW^[l], db^[l].
+
+    Is d\theta approx. = gradJ ?
+
+    J(\theta) = J(\theta_1, \theta_2, ... , \theta_N)
+
+    for i in range(N):
+        dtheta_approx[i] = (J(..., theta[i] + epsilon, ...) - J(..., theta[i] - epsilon, ...)) / (2*epsilon)
+    
+    and this should be true:
+        dtheta_approx[i] approx. = del J / del \theta_i
+    i.e.
+        dtheta_approx approx. = d\theta
+    
+    How to check?:
+            || dtheta_approx - d\theta ||_2
+        --------------------------------------      <= 10^-7    great!
+        || dtheta_approx ||_2 + || dtheta ||_2     ~~= 10^-5    maybe bad?
+                                                    >= 10^-3    worry! something is wrong
+
+    Btw, in practice, \epsilon ~~= 10^-7
+
+L14 - Gradient Checking Implementation Notes
+    - Don't use grad check in training - only to debug
+
+    - If algorithm fails grad check, look at components to try to identify bug.
+        Which are the values that are really very different?
+            e.g.
+                Do the values differ for db^[l] or dW^[l]?
+                This narrows donw the problem and helps us identify the bug.
+
+    - Remember the regularization term
+        J(\theta) = 1/m * sum ( Loss^[i] for i in range(m)) + Lambda/(2*m) * sum ( || W^[l] ||_F ^ 2)
+
+    - Doesn't work with dropout!
+        J is very, very difficult to compute and so the grad check is also very difficult.
+        So, what we do is grad check without dropout (or setting keep_prob = 1.0)
+        and then, if it checks out, and we have overfitting, turn on the dropout to regularize.
+
+    - Run grad check not just at the start, with near-zero randomly initialized weights and biases,
+    but also after some time, when the weights have had enough time to wiggle around.
+    It might be the case that our GD implementation is accurate only arround 0.
+
+
+==================================================================================================
+============================================= WEEK 2 =============================================
+==================================================================================================
+
+L01 - Mini-Batch Gradient Descent
+    Vectorization allows you to efficiently compute on m examples:
+        X = [x^(1) ... x^(m)]       <- stacked
+        Y = [y^(1) ... y^(m)]       <- column vectors
+
+    What if m = 5.000.000 ?
+
+    Splitting the training set into mini-batches of, let's say, 1000 each:
+        X = [x^(1) ... x^(1000) | x^(1001) ... x^(2000) | ... | x^(m-1000+1) ... x^(m)  ]       <- stacked
+        Y = [y^(1) ... y^(1000) | y^(1001) ... y^(2000) | ... | y^(m-1000+1) ... y^(m)  ]       <- column vectors
+
+        X = [       X^{1}       |         X^{2}         | ... |       X^{m/1000}        ]       <- row-stacked matrices
+        Y = [       Y^{1}       |         Y^{2}         | ... |       Y^{m/1000}        ]       <- of stacked column vectors
+        
+    Note: the ^{t} represent the indices of mini-batch data matrices
+    Dimensions:
+        X.shape = (n_x, m)
+        X^{t}.shape = (n_x, 1000)
+
+        Y.shape = (n_y, m)
+        Y^{t}.shape = (n_y, 1000)
+
+    Batch GD - for a single GD step, processing the whole batch (the whole training set)
+    Mini-Batch GD - for a single GD step, processing only a mini-batch (a subset of the training set)
+
+    for t in range(m/1000):
+        AL, fw_cache = forward_prop(X^{t}, W, b, keep_prob)
+        dW, db = backward_prop(AL, Y^{t}, fw_cache, Lambda, keep_prob) 
+        W -= Alpha * dW
+        b -= ALpha * db
+
+    ^^^ This is one epoch - a single pass through the training set.
+    So, now for a single epoch, we perform m/1000 GD steps, instead of just one.
+    Of course, the size of the mini-batch doesn't have to be 1000.
+
+L02 - Understanding Mini-Batch Gradient Descent
+    Batch gradient descent
+        cost J decreases on every iteration
+    Mini-batch GD
+        cost J might not decrease on every iteration
+        - the learning curve should be like batch GD but noisier
+    
+    Choosing your mini-batch size:
+        - another hyperparameter to tune
+        
+        If mini-batch size == m : Batch GD
+            - nicely converges
+            - too long
+        VS
+        If mini-batch size == 1 : Stochastic GD
+            - very noisy
+            - doesn't converge, but wobbles around the optimum
+            - lose all speadup from vectorization,
+        
+        => Visualization on contour plot
+
+        In practice : it will be somewhere in between 1 and m
+            - fasterst learning
+            - vectorization has a good impact
+            - make progress without processing entire training set
+
+        Rule of thumb:
+            If small (<= m) training set: just use batch GD
+
+            Otherwise, use mini-batch GD with mini-batch size:
+                64, 128, 256, 512, ...  <- try out multiple just like any other hyperparameter
+            
+            Make sure that your mini-batch X^{t}, Y^{t} fits in your CPU/GPU memory.
+
+L03 - Exponentially Weighted Averages
+    There are more efficient algorithms than gradient descent.
+    To learn them, let's first learn about Exponentially Weighted Averages.
+
+    e.g.
+        Temperature in London:
+            daily temperature dataset
+                \theta(t)
+
+            exponentially weighted (moving) average:
+                v_0 = 0
+                for t = 1, 2 ...
+                    v_t = \Beta * v_(t-1) + (1-\Beta)*\theta_t
+                
+                v_t is approximately averaging over 1/(1-\Beta) days temperature
+
+                for \Beta = 0.5, 1/(1-\Beta) = 1/0.5 = 2 days average       < - adapts quickly but it's to noisy
+                for \Beta = 0.9, 1/(1-\Beta) = 1/0.1 = 10 days average      < - looks fine, golden middle
+                for \Beta = 0.98, 1/(1-\Beta) = 1/0.02 = 50 days average    < - smooth, but to much lag
+
+
+L04 - Understanding Exponentially Weighted Averages
+    recall:
+        v_t = \Beta * v_(t-1) + (1-\Beta)*\theta_t
+    
+    How is this computing averages?
+        for t = n
+            v_n =   (1 - \Beta) * v_n   +   (1 - \Beta) * \Beta * v_(n-1)   
+                    +   (1 - \Beta) * \Beta^2 * v_(n-2) + ... + (1 - \Beta) * \Beta^n * v_0
+            
+            v_n = (1 - \Beta) * (v_n  +  \Beta * v_(n-1)  +  \Beta^2 * v_(n-2) + ... + \Beta^n * v_0)
+            v_n = (1 - \Beta) * sum(\Beta^k * v_(n-k) for k in range(0, n+1))
+
+            So it's a weighted sum of all previous v_t with weights \Beta^k.
+            The sum of the weights is the sum of the series \Beta^k is:
+                sum(\Beta^k for k in range(0, n+1)) = (1 - \Beta^(n+1)) / (1 - \Beta)
+            which is approaches 1/(1 - \Beta) for large n.
+            And thus the sum of series multiplied by (1 - \Beta) is 1.
+            => so it really has the property of the weighted average.
+
+        How do we tell how much days it's effectively averaging?
+            (1 - \epsilon)^(1/epsilon) = 1/e = exp(-1) =(app.)= 0.35
+            
+            so for \Beta = 0.1:
+                0.9^(1/0.1) =(app.)= 0.35
+                0.9^10 =(app.)= 0.35    (it's actually 0.348678..., so this is a really good approximation)
+            
+            and so the weight for the 10 day old value is 0.35 times the weight of the current day:
+                    0.1 * 0.35 v_(n-10) =
+                    0.035 * v_(n-10)
+                compared to:
+                    0.1 * v_n
+
+    Implementing exponentially weighted averages:
+
+        v_theta = 0
+        for t in range(?):
+            v_theta = Beta * v_theta + (1 - Beta) * theta[t]
+        
+    This may not be computing the same thing as the exact moving average with fixed window,
+    but it is a good approximation, and it is very efficient.
+
+L05 - Bias Correction of Exponentially Weighted Averages
+    Since we're initializing v_theta with 0,
+    you will start with a significant bias towards 0.
+
+    v_0 = 0
+    v_1 = 0 + (1 - \Beta) * \theta_1
+    v_2 = \Beta * (1 - \Beta) * \theta_1 + (1 - \Beta) * \theta_2
+        ( sum of weights is = \Beta - \Beta^2 + 1 - \Beta = 1 - \Beta^2 )
+    ...
+    for \Beta = 0.98:
+        v_2 = .98 * .02 * \theta_1 + .02 * \theta_2
+            = .0196 * \theta_1 + .02 * \theta_2
+    
+    Bias correction:
+        v_t := v_t/(1 - \Beta^t)
+        instead of:
+            v_theta = Beta * v_theta + (1 - Beta) * theta[t]
+        we'll have:
+            v_theta = (Beta * v_theta + (1 - Beta) * theta[t]) / (1 - Beta**t)      <- correction
+
+        for small t, (1 - Beta**t) is significantly less than 1,
+        for large t, (1 - Beta**t) is close to 1.
+
+
+L06 - Gradient Descent With Momentum
+    (a.k.a Momentum)
+
+    The problem of noisy GD:
+        Overshooting in GD slows down learning.
+        Even if the learning rate isn't too high, it happens in mini-batch or stochastic GD.
+        In those cases, it doesn't happen because it actually overshoots the optimum value.
+        It happens because the gradient isn't monotonic in the direction of the current gradient.
+        So if we go in the direction of the current gradient, we would descend for a while,
+        but then start ascending.
+
+        So we want faster learning in some directions, but slower in others,
+        i.e. we want a better estimate of actual gradient that will set us on the fastest way to the optimum.
+
+    Solution - GD with Momentum
+        -> smmoth out the steps of GD via weighted averages
+
+        on iteration t:
+            compute dW, db on current mini-batch (or the whole batch, also works)
+            # estimate gradient via weighted averages
+            v_dW = Beta * dW  +  (1 - Beta) * dW
+            v_db = Beta * db  +  (1 - Beta) * db
+
+            W -= Alpha * v_dW 
+            b -= Alpha * v_db  
+
+    Wait, where did the bias correction go???
+        In practice people usually don't bother with it,
+        because after a dozen iterations the bias will be gone anyways.
+
+    In literature they sometimes ommit the (1 - Beta) terms:
+            v_dW = Beta * dW  +  dW
+            v_db = Beta * db  +  db
+        and this turns out fine, because everything is multiplied by Alpha anyways...
+        
+        BUT, this means that Alpha and Beta are now coupled!!!
+        If you're tuning Beta, you will have to retune Alpha, and that is kind of bad.
+
+L07 - RMSProp
+    recall: the problem of noisy GD
+
+    RMSProp:
+        on iteration t:
+            compute dW, db on current mini-batch
+            s_dW = Beta * s_dW  +  (1 - Beta) * np.square(dW)       # element-wise squaring
+            s_db = Beta * s_db  +  (1 - Beta) * np.square(db)       # element-wise squaring
+
+            W -= Alpha * dW / np.sqrt(s_dW)
+            b -= Alpha * db / np.sqrt(s_db)
+
+    s values seem to be estimating a moving variance?
+    And then the squaring gives us moving standard deviation.
+    So it's like negative feedback:
+        the noisier the gradient,
+        the bigger the std will be,
+        which will shrink the gradient more, making it less noisy.
+
+    in practice, for numerical stability:
+        W -= Alpha * dW / (np.sqrt(s_dW) + epsilon)     # because s_dW could be very close to 0
+        b -= Alpha * db / (np.sqrt(s_db) + epsilon)     # because s_db could be very close to 0
+
+L08 - Adam Optimization Algorithm
+    "Adam" : Adaptive Moment Estimation
+    Momentum + RMSProp == Adam
+
+    v_dW = 0
+    v_db = 0
+    s_dW = 0
+    s_db = 0
+
+    on iteration t:
+        compute dW, db using current mini-batch
+        # Momentum
+        v_dW = Beta1 * v_dW  +  (1 - Beta1) * dW
+        v_db = Beta1 * v_db  +  (1 - Beta1) * db
+
+        # RMSProp
+        s_dW = Beta2 * s_dW  +  (1 - Beta2) * np.square(dW)
+        s_db = Beta2 * s_db  +  (1 - Beta2) * np.square(db)
+
+        # Bias correction for Momentum
+        v_dW_corrected = v_dW / (1 - Beta1**t)
+        v_db_corrected = v_db / (1 - Beta1**t)
+
+        # Bias correction for RMSProp
+        s_dW_corrected = s_dW / (1 - Beta2**t)
+        s_db_corrected = s_db / (1 - Beta2**t)
+
+        W -= Alpha * v_dW_corrected / (np.sqrt(s_dW) + epsilon)
+        b -= Alpha * v_db_corrected / (np.sqrt(s_db) + epsilon)
+
+    Hyperparameter choice:
+        Alpha : needs to be tuned
+        Beta1 : 0.9         < - default; usually good choices
+        Beta2 : 0.999       < - default; usually good choices
+        epsilon : 10**(-8)      <- authors recommendation, doesn't really need tuning
+
+L09 - Learning Rate Decay
+    Slowly decreasing learning rate over time
+    When would we want to do this?
+        In case of noisy GD (small mini-batches),
+        it will never converge, but just wiggle around the optimum.
+        Slower learning, would mean taking smaller steps
+
+
+    Alpha = 1 / (1 + decay_rate * epoch_num) * Alpha_0
+
+    Other learning rate decay methods
+        Exponential decay:
+            Alpha = 0.95**epoch_num * Alpha_0
+        
+        Alpha = k / sqrt(epoch_num) * Alpha_0
+            or
+        Alpha = k / sqrt(t) * Alpha_0
+    
+        Discrete staircase decay
+    
+        Manual decay
+
+  
+How to tune all these hyperparameters we mentioned?
+    - Next week
+
+
+==================================================================================================
+============================================= WEEK 3 =============================================
+==================================================================================================
+
+L01 - Tuning process
+    Hyperparameters
+        There's a lot of them, so here's a rule of thumb priority list
+            Most important
+                1. Alpha - the learning rate
+
+            Then:
+                2. #hidden units
+                2. mini-batch size
+                2. Beta - the momentum 
+            
+            Then:
+                3. #layers
+                3. learning rate decay
+
+            Adam parameters, pretty much don't need tuning (.9 , .999, 1.e-8):
+                4. Beta1, Beta2, epsilon
+
+    Try random values: Don't use a grid
+        Early ML practicioners sampled the hyperparameter space by discretizing it via a grid.
+        
+        Random sampling has proven to be a better method, exploring the space more richly.
+    
+    Coarse to fine
+        Sample (randomly) but more coarse,
+        then "zoom-in" to the space around the best parameters,
+        and sample again but more densely
+        (repeat)
+
+L02 - Using an Appropriate Scale
+    Although it might seem intuitive,
+        sampling at random doesn't mean sampling uniformly at random, over the range of valid values!
+        It's important to pick the appropriate scale in which to explore the hyperparameters.
+    
+    Picking hyperparameters at random
+        e.g. choosing #hidden units in a layer l : n^[l]:
+                sampling uniformly at random from interval [50, 100] might be reasonable
+        or chossing #layers:
+                sampling uniformly at random from {2,3,4,5} might be a reasonable thing to do
+        BUT this isn't true for all hyperparameters!
+
+        Alpha:
+            You think a reasonable interval where optimal Alpha would be is [0.0001, ... , 1].
+            If you sample uniformly at random from [0.0001 , 1],
+                you would spend 90% of the resources to search on the interval [0.1 , 1],
+                       and only 10% of the resources to search on the interval [0.0001, 0.1].
+            This isn't right; .0001 -> .0002 is a much bigger change than .999 -> 1
+
+            It is far more reasonalbe to search on the log scale:
+                ---------------------------------
+                .0001   .001    .01     .1      1
+            In python:
+                r = -4 + 4 * np.random.rand()       # in [-4, 0]
+                Alpha = 10 ** r
+            Or in general:
+                # from [c, d] = [10**a, 10**b] on the log scale
+                a, b = np.log10((c, d))
+                r = a + (b - a) * np.random.rand()  # in [a, b]
+                Alpha = 10 ** r
+
+        Hyperparameters for exponentially weighted averages:
+            e.g.
+                Beta in : 0.9 ... 0.999
+                iters   :  10 ...  1000         = 1 / (1 - Beta) (#last days from the temperature example)
+            Now it's reversed, 0.9 -> 0.95 is not a big change:
+                1 / (1 - .9) = 1/.1 = 10 iters
+                1 / (1 - .95) = 1/.05 = 20 iters
+            While .999 -> .9995 is a giant change
+                1 / (1 - .999) = 1/.001 = 1000 iters
+                1 / (1 - .9995) = 1/.0005 = 2000 iters
+            
+            So let's look at 1 - Beta:
+                for Beta : 0.9 ... 0.999
+                1 - Beta : 0.1 ... 0.001
+            => we can sample 1-Beta on the log scale just like we did Alpha:
+                r = a + (b - a) * np.random.rand()  # in [a, b]
+                Beta = 1 - 10 ** r
+
+L03 - Hyperparameters Tuning in Practice: Pandas vs. Caviar
+    Re-test hyperparameters occasionally
+        Intuitions do get stale
+    
+    Babysitting one model, or only a few (Pandas)
+        If you don't have enough resources to train many models (e.g. if the data is too big),
+        you can carefully monitor one (or a few models) and nudge the hyperparameters from day to day.
+    VS
+    Training many models in parallel (Caviar (fish))
+        If you have enough resources, you can let the computers do all the computing,
+        training a large family of models and then just pick the best one.
+
+L04 - Normalizing Activations in a Network
+    Batch Normalization (Sergei Ioffe, Christian Szegedy)
+    
+    We already now that normalizing input features is very beneficial.
+    
+    Can we do the same thing with activations in a DNN?
+    Yes, but, in practice, it is more common to normalize the Z-values in pre-activation.
+
+    Implementing Batch Norm
+        Given some intermediate values in NN : Z^[l] = [ Z^[l](1) ... Z^[l](m) ]:
+            mu = np.mean(Z^[l], axis=1, keepdims=True)
+            sig = np.std(Z^[l], axis=1, keepdims=True)
+            Z_norm^[l] = (Z^[l] - mu) / (sig + epsilon)
+
+        But we don't want them to always have a fixed, N(0, 1), distribution,
+        so we give them two parameters:
+            Z_tilda^[l] = Gamma * Z_norm^[l]  +  Beta
+                and now Gamma is the new std, Beta is the new mean,
+                and both are now learnable parameters of model, just like the weights and biases.
+        
+        And now we use Z_tilda^[l] instead of Z^[l]
+
+L05 - Fitting Batch Norm into a Neural Network
+    Adding Batch Norm to a network
+        e.g. a small network (input and layers : 3-2-2-1)
+            each neuron is a two-step computation, or vectorized:
+                Z^[l] = W^[l] dot A^[l-1] + b^[l]
+                A^[l] = g^[l](Z^[l])
+            Now, between those two steps, we insert the Batch Norm:
+                Z^[l] = W^[l] dot A^[l-1] + b^[l]
+
+                # normalization
+                mu^[l] = np.mean(Z^[l], axis=1, keepdims=True)
+                sig^[l] = np.std(Z^[l], axis=1, keepdims=True)
+                Z_tilda^[l] = Gamma^[l] * (Z^[l] - mu^[l])/(sig^[l] + epsilon) + Beta^[l]
+                
+                A^[l] = g^[l](Z_tilda^[l])
+            
+        Gamma^[l], Beta^[l] are computed via Gradient Descent (or Momentum, RMSProp, Adam...)
+        in the same way as weights and biases.
+        
+        Don't worry about implementation, it's always usually one line of code in DL frameworks.
+
+    Working with mini-batches
+        X^{1}  ->  ... ->  A^[l-1]  --W^[l], b^[l]-->  Z^[l]  --Batch Norm->  Z_tilda^[l]  ->  A^[l] = g^[l](Z_tilda^[l])
+        
+        X^{2} ...
+
+    Parameters
+        W^[l], b^[l], Beta^[l], Gamma^[l]
+        Notice that b^[l] are constant for all examples.
+            Since we are subtracting the mean of Z^[l],
+            constant b^[l] gets canceled out.
+            So we might as well get rid of it, and in a sense, it is replaced by Beta^[l]
+
+        Dimensions:
+            Beta^[l] and Gamma^[l] have the same shape as b^[l] : (n^[l], 1)
+    
+    Implementing Gradient Descent:
+        for t in range(num_mini_batches):
+            # compute forward prop on X^{t}
+            for l in range(1, L+1):
+                # use Batch Norm to replace Z^[l] with Z_tilda^[l]
+
+            # compute backward prop on X^{t}
+            for l in range(L, -1, -1):
+                # use backprop to compute dW^[l], dBeta^[l], dGama^[l]
+            
+            # update the parameters:
+            for l in range(1, L+1):
+                W^[l]       -= Alpha * dW^[l]
+                Beta^[l]    -= Alpha * dBeta^[l]
+                Gamma^[l]   -= Alpha * dGamma^[l]
+
+            # or add Momentum, RMSProp, Adam...
+    
+L06 - Why Does Batch Norm Work
+    Further intuitions
+    
+    It makes deeper layers more robust
+
+    Learning on shifting input distribution ("Covariate Shift")
+        e.g. Cat/Not-cat classification
+            Training set contained more black cats
+            Test set contained more colored cats
+        -> ground truth hasn't changed but the distribution of the training data might change
+    
+    Why is this a problem with neural networks?
+        Looking any layer as the first hiddne layer of the network,
+        and previous activations as the input features,
+        as the actual input to the network changes, the activations change as well.
+        In raw form, they might display a "covariate shift", as well,
+        but what Batch Norm ensures is that the mean and variance remain the same,
+        thus fixing the covariate shift problem.
+    
+        In some way, Batch Norm decouples layers, making them learn more independently.
+    
+    Batch Norm as (sligh) regularization:
+        Each mini-batch is scaled by the mean/variance computed on just that mini-batch.
+
+        This adds some noise to the values Z^[l] within that minibatch.
+        So, similar to dropout, it adds some nosie to each hidden layer's activations.
+        This has a slight regularization effect.
+
+        If you use a bigger mini-batch size, you are reducing the regularization effect.
+
+        This effect isn't very strong, and you shouldn't rely on it for regularization!
+        It is a small unintended side-effect.
+        If you are suffering from overfitting, you should use dropout.
+
+L07 - Batch Norm at Test Time
+    In training, Batch Norm processes data one mini-batch at a time.
+    What about test time?
+    Where do we get mu and sigma from?
+
+    We estimate:
+        Estimating mu^[l] and sigma^[l] via exp. weighted averages of all mu^[l]{t}, sigma^[l]{t} from mini-batches.
+        (As I understand, mu^[l] and sigma^[l] are initialized (mu - zeros, sigma - ones) only once,
+        so that the values from the end of one epoch, remain at the start of the next one)
+
+
+L08 - Softmax Regression
+    Multi-class Classification
+
+    Generalization of logistic regression is the softmax regression
+
+    e.g. Recognizing: cats, dogs, baby chicks or other
+        labels {1, 2, 3, 0}
+        C = #classes = 4
+        Now we are building a neural network where the output layer has C units
+        Each output unit should represent P(y = c | x), where c is in {0, 1, 2, 3}
+    
+    Softmax layer
+        As usual, Z^[L] = W^[L] dot A^[L-1] + b^[L]
+    Softmax activation function for g^[L]():
+        T = e^(Z^[L])
+        # normalizing, so that the sum of the output layer is 1, making it a legit probability distribution
+        A^[L] = T / np.sum(T,  axis = 0, keepdims=True)
+    
+    Softmax examples
+        2D input, no hidden layers, 3 output classes:
+            Z^[1] = W^[1]*X + b^[1]
+            A^[1] = Y_hat = softmax(Z^[1])
+            
+            - examples of decision boundaries
+            we see that it is a generalization of logistic regression 
+
+L09 - Training Softmax Classifier
+    Understanding softmax
+        The name comes from contrasting it to "hard max" function,
+        which outputs a vector of "0"s and a single "1" for the most probable class.
+
+        If C=2, softmax reduces to logistic regression.
+
+    Loss function
+        y = [0, 1, 0, 0]^T
+        a^[L] = y_hat = [.3, .2, .1, .4]^T
+        
+        Again, cross-entropy (comes from MLE):
+            Loss(y_hat, y) = - sum( y_j * log(y_hat_j) )
+        And for the cost:
+            J = 1/m * sum( Loss(...) )
+
+    Gradient descent with softmax
+        the key first step in backprop:
+            del J / del z^[L] = dz^[L] = y_hat - y
+
+L10 - The Problem of Local Optima
+    It turns out that majority of points of 0 gradient aren't local optima,
+    they are saddle points! :D
+
+    The higher the dimension of the search-space,
+    the less-likely it is for a 0 gradient point to be a local optimum.
+    e.g.
+        in a 20.000 dimensional space, for a local optimum to occur,
+        all 20.000 partial derivatives would have to be 0.
+    
+    So if local optima aren't a problem, what is the problem?
+    
+    -> Plateaus
+        When the gradient gets very, very small, the learning becomes slow.
+        That's why Momentum and RMSProp and Adam are used to speed up learning.
+
+
+L11 - TensorFlow
+    Motivating problem
+        some cost function J
+        e.g. J(w) = w**2 - 10*w + 25
+    
+    How could we minimize this in TensorFlow?
+    -> switching to jupyter notebook
+
+    Note:
+        TensorFlow v1 is used in the video. Needs some work for backwards compatibility in v2.
+        The easiest way of using TensorFlow:
+            1. create/upload the Jupyter Notebook in your Google Drive
+            2. open it in Google Colaboratory
+
+    The point of using programming frameworks like TensorFlow
+    is that you don't need to explicitly programm all the methods like forward prop, back prop etc.
+    There's a lot of things you can do with just one line of code.

@@ -1,0 +1,931 @@
+Credits:
+    Notes taken from video lectures: deeplearning.ai - Deep Learning Specialization - Course 1
+    author of the notes: Miloš Pivaš
+
+==================================================================================================
+========================== Course 1 : Neural Networks and Deep Learning ==========================
+==================================================================================================
+
+==================================================================================================
+============================================ CONTENTS ============================================
+==================================================================================================
+
+Week 1
+    L01 - Welcome
+    L02 - What is a Neural Network?
+    L03 - Supervised Learning with a Neural Network
+    L04 - Why is Deep Learning taking off?
+    L05 - About This Course:
+    L06 - Course resources
+
+Week 2
+    L01 - Binary Classification
+    L02 - Logistic Regression
+    L03 - Logistic Regression Cost Function
+    L04 - Gradient Descent
+    L05 - Derivatives (kindergarten stuff)
+    L06 - More Derivatives (post-kindergarten stuff)
+    L07 - Computation Graph
+    L08 - Derivatives with Computation Graphs
+    L09 - Logistic Regression Gradient Descent
+    L10 - Gradient Descent on m examples
+    L11 - Vectorization
+    L12 - More Vectorization examples:
+    L13 - Vectorizing Logistic Regression
+    L14 - Vectorizing Logistic Regression's Gradeint Computation
+    L15 - Broadcasting in Python
+    L16 - A Note on Vector (technically, Tensor) Representation in Python (Numpy Arrays)
+    L17 - Quick Tour of Jupyter/iPython Notebooks
+    L18 - Explanation of Logistic Regression's Cost Function
+
+Week 3
+    L01 - Neural Network Overview
+    L02 - Neural Network Representation
+    L03 - Computing Neural Network Output
+    L04 - Vectorizing Across Multiple Examples
+    L05 - Explanation for Vectorized implementation
+    L06 - Activation functions
+    L07 - Why Non-linear Activation functions?
+    L08 - Derivatives of the activation functions
+    L09 - Gradient Descent For Neural Networks
+    L10 - Backpropagation Intuition
+    L11 - Random Initialization
+
+Week 4
+    L01 - Deep L-Layer Neural Network
+    L02 - Forward Propagation in a DNN
+    L03 - Getting Matrix Dimensions Right
+    L04 - Why Deep Representations?
+    L05 - Building Blocks of a Deep Neural Network
+    L06 - Forward and Backward Propagation
+    L07 - Parameters vs Hyper Parameters
+    L08 - What does this have to do with the brain?
+
+
+
+==================================================================================================
+============================================= WEEK 1 =============================================
+==================================================================================================
+
+
+L01 - Welcome
+    Intro, Specialization overview, 
+
+L02 - What is a Neural Network?
+    Small Supervised Learning refresher
+    Small Neural Networks refresher
+
+L03 - Supervised Learning with a Neural Network
+    Example applications
+    NN types:
+        standard NNs
+        Convolutional NNs
+        Recurrent NNs
+
+    Structured Data (features given in databases)
+        vs
+    Unstructured Data (features "hidden" in audio/image/text data)
+
+L04 - Why is Deep Learning taking off?
+    Scale drives Deep Learning progress
+        amount of (labeled) data/performance graph:
+            classic ML has a saturation level
+                at one point, the increase in the amount of data, 
+                doesn't bring the increase in the performanse
+            
+            DNNs seem to not have that limitation
+                (or we still haven't reached it?)
+                the bigger the NN, more data it can handle
+
+            for small training sets:
+                relative performance orderings between different algorithms is not well defined
+                it mostly depends on the skill of the engineer
+            
+        Over time there are improvements in each of these areas:
+            - Data : the scale of available data increases
+                Digitalization of society brings more and more data
+
+            - Computation : the scale of available computational resources increases
+                CPU -> more cores -> GPUs -> TPUs
+
+            - Algorithms : more efficient algorithms are developed
+                for example - ReLU instead of Sigmoid function
+        
+        All these improvements lead to faster R&D iteration cycle:
+            Idea -> Code -> Experiment -> Idea ...
+
+L05 - About This Course:
+    Week 1 : Intro
+    Week 2 : Basics of NN programming
+    Week 3 : One hidden layer NNs
+    Week 4 : Deep NNs
+
+L06 - Course resources
+
+
+==================================================================================================
+============================================= WEEK 2 =============================================
+==================================================================================================
+
+
+L01 - Binary Classification
+    Classification intro    
+    Logistic Regression
+    Image classification - cat detection - cat/not:
+        Input : 64x64 RGB image
+        Output : cat/not cat label 
+
+        preprocessing - pixel unrolling:
+            for each image, "unroll" all pixel values (3D: RxGxB) into a 1D feature vector
+    
+    Notation:
+        training example: (x, y)
+            x   in R^n_x    Input
+            y   in {0, 1}   Output i.e. Label
+        
+        training set:
+            {(x^(1), y^(1)), (x^(2), y^(2)), ... , (x^(m), y^(m))}
+                1st example,    2nd example,        m-th example
+
+        m/m_train - size of the training set
+        m_test - size of the test set
+
+        data combined into data matrices:
+            X = [ x^(1) x^(2) ... x^(m) ]
+                X.shape = (n_x, m)
+
+            Y = [ y^(1) y^(2) ... y^(m)]
+                Y.shape = (1, m)
+
+            Note: X and Y are transposed versions of data matrices used in other classic ML courses
+            This upper notation is specifically more convenient for Neural Networks
+
+L02 - Logistic Regression
+    Given input feature vector x,    want y_hat = a = p(y = 1 | x, w, b)
+    Output: y_hat = a = sigmoid(np.dot(w.T, x) + b)
+    x in R^n_x
+    Parameters: w in R^n_x, b in R
+    
+    Sigmoid function review:
+        sigmoid(z) = 1 / (1 + exp(-z))
+        properties:
+            lim_(z-> -inf) sigmoid(z) = 0
+            sigmoid(0) = 0.5
+            lim_(z-> inf) sigmoid(z) = 1
+    
+    Note: we won't use the convention to combine w and b into theta = [b; w]
+
+L03 - Logistic Regression Cost Function
+    notation review
+
+    Single training example:
+        Loss (error) function - L(a, y):
+            Square error:
+                L(a, y) = 1/2*(a - y)^2
+                this won't work because it would produce a non-convex optimization problem
+        
+            Binary Cross-Entropy (Log Loss):
+                L(a, y) = - ( y*log(a) + (1-y)*log(1 - a))
+    
+    Entire training set:
+        Cost function:
+            J(w, b) = 1/m * sum( LogLoss(a^(i), y^(i)) )
+
+L04 - Gradient Descent
+    Recap: 
+        y = sigmoid(w^T dot x + b), sigmoid(z) = 1/(1+exp(-z))
+        J(w, b) = 1/m*sum(LogLoss(a^(i), y^(i)))
+    
+    Want: w, b = argmin{ J(w, b) }, over w,b
+    GD algorithm:
+        initialize w, b to a (random/zero) point
+        repeat until convergence:
+            take step down the gradient of J
+    
+    Gradeint Descent graph
+    
+    Gradeint Descent algorithm:
+        initialize w, b to a (random/zero) point
+        repeat until convergence:
+            w := w - Alpha * dJ(w, b)/dw
+            b := b - Alpha * dJ(w, b)/db
+
+L05 - Derivatives (kindergarten stuff)
+L06 - More Derivatives (post-kindergarten stuff)
+L07 - Computation Graph
+    A graphic way to visualize the computation of a symbolic expression
+    Example:
+        input vars : a, b, c
+        nodes:
+            u(b, c) = b*c
+            v(a, u) = a + u(b, c)
+            J(v(a, u(b, c))) = 3*v(a, u(b, c)) = J(a, b, c)
+
+L08 - Derivatives with Computation Graphs
+    Computation Graphs used as a nice way to visualize the Chain Rule
+
+    Example:
+        J(v(a, u(b, c)))
+
+        dJ/da = dJ/dv * dv/da
+
+        dJ/db = dJ/dv * dv/du * du/db
+        
+        dJ/dc = dJ/dv * dv/du * du/dc
+
+    Note: in code, we will write dJ/dx as just dx, so
+        we will write dJ/dw as dw
+        we will write dJ/db as db
+    
+L09 - Logistic Regression Gradient Descent
+    Logistic Regression recap:
+        vars: w, x, b
+        =>      z = w^T dot x + b
+        =>      y^ = a = sigmoid(z)
+        =>      L(a,y) = -(y*log(a) + (1-y)*log(1-a))
+    
+    Computation Graph (overkill for Log. Reg. but educational)
+    Logistic Regression Derivatives (on single training example):
+        da = dL(a, y)/da = -y/a + (1-y)/(1-a)
+
+        dz = dL(a, y)/dz = dL/da * da/dz = a - y
+
+        dw_i = dL/dw_i = dL/da * da/dz * dz/dw_i = x_i * (a - y)
+        
+        db = dL/db = dL/da * da/dz * dz/db = a - y
+        
+L10 - Gradient Descent on m examples
+    Just like the cost function J is the average of Loss functions:
+        J(w,b) = 1/m*sum( LogLoss(a^(i), y^(i)) )
+    
+    the derivatives are the averages of Loss functions' derivatives:
+        dJ(w,b)/dw_j = 1/m*sum( dL(a^(i), y^(i) / dw_i) )
+    i.e.
+        gradJ(w,b) = 1/m*sum( gradL(a^(i), y^(i)) )
+
+    One step of GD via for loops:
+
+        J = 0, dw = np.zeros((n_x, 1)), db = 0
+
+        for i in range(m):
+            z[i] = np.dot(w, x[i]) + b
+            a = sigmoid(z[i])
+            J += - (y[i]*log(a) + (1 - y[i])*log(1-a))
+            dz = a - y[i]
+            for j in range(n_x):
+                dw[i] += x[i,j]*dz
+            
+            db += dz
+        
+        J /= m, dw /= m, db /= m
+
+    This is only educational, because it's nice to see what calculations are exactly taking place,
+    but it is very, very inefficient.
+    We need to vectorize this.
+
+L11 - Vectorization
+    Vectorization review and demonstration in Jupyter notebook
+
+    Vectorized, built-in function are more efficient.
+    They can also usually exploit SIMD (Single Instruction Multiple Data).
+
+L12 - More Vectorization examples:
+    matrix product:
+        u = A dot v
+    instead of double for loop:
+        u = np.dot(A, v)
+        Note: * is not matrix product on numpy arrays, it's Hadamard product (element-wise)
+    element-wise functions:
+        u = np.exp(v)
+            np.log(v)
+            np.abs(v)
+            np.maximum(v, 0)
+            v**2
+            1/v
+            +, -, *, /
+
+L13 - Vectorizing Logistic Regression
+    X, y = get_features_and_labels(data)
+    Z = np.dot(w.T, X) + b      <- "broadcasting"
+    A = sigmoid(Z)
+
+L14 - Vectorizing Logistic Regression's Gradeint Computation
+    Finalizing the vectorized GD implementation:
+
+    for i in range(n_epochs):   # the only necessary for loop
+        Z = np.dot(w.T, X) + b
+        A = sigmoid(Z)
+        dZ = A - Y 
+        dw = 1/m * np.dot(X, dZ.T)
+        db = 1/m * np.sum(dZ)
+
+        w = w - Alpha * dw
+        b = b - Alpha * db
+
+L15 - Broadcasting in Python
+    Broadcasting examples
+        Example in Jupyter notebook:
+            A = np.array([[...], [...], [...]])
+            # A.shape = (3, 4)
+            sums = A.sum(axis=0)
+            percentage = 100 * A / sums.reshape(1, 4)
+            # reshape is redundant, but since it is O(1),
+            # it's nice for hygienic sanity checking
+        
+        General Principle:
+        Implicit 1D to 2D matrix copy-expansions for element-wise operations:
+                        +       
+            (m, n)      -   (m, 1)  ->  (m, n)
+            matrix      *   (1, n)  ->  (m, n)
+                        /   
+
+L16 - A Note on Vector (technically, Tensor) Representation in Python (Numpy Arrays)
+    import numpy as np
+
+    a = np.random.randn(5)      # defining a vector
+    
+    # is it a vector?
+    
+    assert(a.shape == (5, 1))   # fails
+    # because
+    assert(a.shape == (5,))
+
+    ##### BEWARE #####
+    # this isn't going to return the outer product:
+    print(np.dot(a, a.T))
+    # because a is a rank-1 array:
+    # it isn't a vector
+
+    # instead use this:
+    a = np.random.randn(5, 1)
+    # a.shape == (5, 1)         # now this is a column vector
+    # print(np.dot(a, a.T))     # now this is the outer product
+
+    # we can use both:
+    assert(a.shape == (5, 1)) # for sanity-checking
+    # and
+    a = a.reshape(5, 1) # for explicit conversion to desired shape
+
+L17 - Quick Tour of Jupyter/iPython Notebooks
+    
+L18 - Explanation of Logistic Regression's Cost Function
+    We are interpreting our prediction
+        y_hat = a = sigmoid(w^T dot x + b)
+    to be the conditional probability:
+        a = p(y = 1 | x, w, b)
+    
+    We can rewrite this as:
+        for y == 1 :    p(y | x, w, b) = a
+        for y == 0 :    p(y | x, w, b) = 1 - a
+    and further:
+        p(y | x, w, b) = a^y * (1-a)^(1-y)
+    
+    And now we can interpret this probability as being parametrized by w and b:
+        p(y | x, w, b) --> p(y | x; w, b)
+
+    and interpret the Logistic Regression as the estimator of the parameters w and b,
+    with the likelihood of the estimator being exactly:
+        L(w, b) = p(y | x; w, b) = a^y * (1-a)^(1-y)
+
+    And now the log-likelihood is:
+        l(w, b) = y*log(a) + (1-y)*(1-a)
+        
+    We want to perform Maximum Likelihood Estimation,
+    and maximizing l(w,b) is the same as minimizing -l(w,b),
+    and -l(w,b) is exactly how we defined our LogLoss function:
+        LogLoss(a, y) = -l(w,b) = - (y*log(a) + (1-y)*(1-a))
+    
+    For the cost function:
+        Joint probability of the labels in the training set
+        (assuming the labels are IID (independent, identically distributed)):
+
+            p (labels in training set ) = product( p(y^(i) | x^(i), w, b) )    
+        
+        then, as in the single training example case:
+            p(y^(i) | x^(i), w, b) = p(y^(i) | x^(i); w, b)
+        
+        and now the likelihood is:
+            L(w, b) = product( p(y^(i) | x^(i); w, b) )     / log
+            l(w, b) = sum( log( p(y^(i) | x^(i); w, b) ) )
+                    = sum ( - LogLoss(a^(i), y^(i)) )
+                    = -sum ( LogLoss(a^(i), y^(i)) )
+        
+        maximizing l(w,b) is the sam as minimizing -l(w,b) so:
+                -l(w,b)           = sum ( LogLoss(a^(i), y^(i)) )
+        and for better scaling (doesn't interfere with the optimization procedure)
+                -l(w,b)/m         = 1/m * sum ( LogLoss(a^(i), y^(i)) )
+        and that is our Cost function:
+            J(w, b) = -l(w,b)/m = 1/m * sum ( LogLoss(a^(i), y^(i)) )
+
+        
+
+==================================================================================================
+============================================= WEEK 3 =============================================
+==================================================================================================
+
+L01 - Neural Network Overview
+    Week 2 recap
+        Log. Reg. computation graph:
+        x
+        w   ->      z = w^T dot x + b     ->      a = sigmoid(z)      ->      Loss(a, y)
+        b
+
+    What is a Neural Network?
+        Logistic Regression is a single neuron in a Neural Network
+        NNs are built by combining multiple neurons
+        Example: 2 layer, 3-3-1 (I-H-O) NN:
+            Computation graph ...
+        Notation
+            z^[1] = W^[1] dot x + b^[1]
+            a^[1] = sigmoid(z^[1])
+                ...
+            z^[L] = W^[L] dot x + b^[L]
+            a^[L] = sigmoid(z^[L])
+            Loss(a, y)
+
+            Note:   superscript square brackets denote the index of the layer,
+                    whereas superscript round brackets denote the index of the training sample
+
+            We will apply the same process as with the Log. Reg.:
+                - forward propagation
+                - backpropagation
+
+L02 - Neural Network Representation
+    Computation graph drawing:
+        Basic structure:
+            input layer - hidden layer - output layer (3-4-1 example)
+        Comments on the nomenclature of the "hidden" layer(s)
+        a - activations
+        Input layer:
+            a^[0] = x
+
+        Hidden layer
+            activations:
+                a^[1] = [a^[1]_1 a^[1]_2 a^[1]_3 a^[1]_4].T
+            parameters:
+                W^[1], b^[1]
+
+        Output layer
+            activations:
+                a^[2] = y_hat
+            parameters:
+                W^[2], b^[2]
+
+        Note: even though there are technically 3 layers,
+        we call this network a 2 layer NN - we don't count the 0th, input layer
+
+L03 - Computing Neural Network Output
+    Log. Reg. as a node/neuron
+        Two halves of a circle
+            1. z = w^T dot x + b
+            2. a = sigmoid(z)
+    
+    Neural Network:
+        Forward propagation for each neuron in the ^[1] hidden layer:
+            _1 neuron in the ^[1] hidden layer:
+                z^[1]_1 = w^[1]_1 ^T dot x + b^[1]_1
+                a^[1]_1 = sigmoid(z^[1]_1)
+
+            _2 neuron in the ^[1] hidden layer:
+                z^[1]_2 = w^[1]_2 ^T dot x + b^[1]_2
+                a^[1]_2 = sigmoid(z^[1]_2)
+
+            _3 neuron
+                ...
+            _4 neuron
+                ...
+        
+        Vectorized:
+            weights and biases
+                W^[1] = [ w^[1]_1^T ; w^[1]_2^T; w^[1]_3^T; w^[1]_4^T ]
+                b^[1] = [ b^[1]_1 ; b^[1]_2 ; b^[1]_3 ; b^[1]_4 ]
+
+            forward prop. computation:
+                z^[1] = W^[1] dot x + b^[1]
+                z^[1] = W^[1] dot a^[0] + b^[1]       # a^[0] = x
+    dimensions:  4,1  =  4,3  dot  3,1  +  4,1
+
+                a^[1] = sigmoid(z^[1])
+                 4,1  =          4,1
+
+            So, for the whole NN:
+                z^[1] = W^[1] dot x + b^[1]
+                a^[1] = sigmoid(z^[1])
+                z^[2] = W^[2] dot a^[1] + b^[2]
+                a^[2] = sigmoid(z^[2])
+
+L04 - Vectorizing Across Multiple Examples
+    2 layer network vectorized forward prop on single example
+        z^[1] = W^[1] dot x + b^[1]
+        a^[1] = sigmoid(z^[1])
+        z^[2] = W^[2] dot a^[1] + b^[2]
+        a^[2] = sigmoid(z^[2])
+            
+    With loops, and ^(i) denoting the training example index:
+        for i = 1 to m:
+            z^[1](i) = W^[1] dot x^(i) + b^[1]
+            a^[1](i) = sigmoid(z^[1](i))
+            z^[2](i) = W^[2] dot a^[1](i) + b^[2]
+            a^[2](i) = sigmoid(z^[2](i))
+
+    Vectorization is relatively trivial because we defined X as:
+        X = [x^(1) x^(2) ... x^(m)]
+
+        and so we have: 
+            Z^[1] = W^[1] dot X + b^[1]               # or A^[0] = X
+            A^[1] = sigmoid(Z^[1])
+            Z^[2] = W^[2] dot A^[1] + b^[2]
+            A^[2] = sigmoid(Z^[2])
+
+        where matrices Z^[j] and A^[j] are just column vectors z^[j](i) and a^[j](i), stacked together
+            Z^[j] = [z^[j](1) z^[j](2) ... z^[j](m)]
+            A^[j] = [a^[j](1) a^[j](2) ... a^[j](m)]
+
+L05 - Explanation for Vectorized implementation
+    Justification for vectorized implementation
+        drawing out the linear algebra of previous equations
+    
+    Recap of vectorizing across multiple examples        
+
+L06 - Activation functions
+    Sigmoid
+        recap...
+
+    In more general case, we can have some function g:
+        A^[j] = g(Z^[j])
+    
+    Hyperbolic tangent:
+            a = tanh(z) = (exp(z) - exp(-z)) / (exp(z) + exp(-z))
+
+        Kind of like a shifted sigmoid, so that it is symmetric around (0,0)
+        + Almost always superior to sigmoid!
+        - One exception is the output layer, where we need [0,1] bounds for output.
+        => yup, we can use different activation functions for different layers
+        and notation for that can be: g^[j](z^[j])
+
+    - Both sigmoid and tanh have a downside in the property that when
+        |z| is very large => the derivative is very small
+    
+    ReLU:
+            a = ReLU(z) = max(0, z)
+            da/dz = 0 if z < 0; 1 if z > 0
+        
+        + This enables the networks to learn much faster.
+
+        - Technically not differentiable at z = 0,
+        but z == 0 is very unlikely to happen, and if it does happen,
+        we can just define the derivative to be 0 there as well
+            da/dz = 0 if z <= 0; 1 if z > 0
+
+        - one disadvantage is that the derivative is 0 for z < 0,
+        and that can be be a problem sometimes, so there's a variant:
+        
+        + Leaky ReLU:
+                a = LeakyReLU(z) = max(k*z, z),
+            where k is in [0, 1], usuall very small, like 0.01
+            so the derivative is:
+                da/dz = k if z <= 0; 1 if z > 0
+
+        But plain ReLU almost always works just fine
+
+    Rule of thumb:
+        sigmoid - only for output layer where values need to be [0, 1]
+        ReLU - for all other layers
+
+L07 - Why Non-linear Activation functions?
+    Since neurons don't need to bound their input to [0, 1],
+    why use an activation function at all?
+    Or why use these non-linear ones?
+
+    Suppose we use a linear function, for example the identity function:
+        A^[1] = Z^[1] = W^[1] dot X + b^[1]
+
+    Then for the next layer:
+        A^[2] = Z^[2] = W^[2] dot A^[1] + b^[2]
+                      = W^[2] dot (W^[1] dot X + b^[1]) + b^[2]
+                      = W^[2] dot W^[1] dot X  +  W^[2] dot b^[1] + b^[2]
+                      = W' dot X + b'
+    
+    Which is the same as if we didn't have any hidden layers.
+
+    So we should always use non-linear activation functions?
+
+    -> UNLESS we are using the network for solving a regression problem. 
+    Then the output is Real, and we could use a linear activation function.
+    --> UNLESS the outputs are non-negative and then ReLU should work perfectly.
+    ---> UNLESS there are other limitation specific to our problem.
+
+    Conclusion: ReLU is the most commonly used activation function,
+    but don't view it as a golden hammer.
+
+L08 - Derivatives of the activation functions
+    Reviewing derivatives:
+    Sigmoid:
+        a = g(z) = sigmoid(z)
+        g'(z) = ... = a(1 - a)
+    
+    Hyperbolic tangent:
+        a = g(z) = tanh(z)
+        g'(z) = ... = 1 - a^2
+    
+    ReLU:
+        a = g(z) = max(0, z)
+        g'(z) =     0   if z <= 0
+                    1   if z > 0
+
+    Leaky ReLU:
+        a = g(z) = max(k*z, z)
+        g'(z) =     k   if z <= 0
+                    1   if z > 0
+        where k is small, inside [0, 1]
+
+L09 - Gradient Descent For Neural Networks
+    Parameters:         W^[1]              b^[1]          W^[2]              b^[2]
+    Shape:          (n^[1],n^[0])       (n^[1], 1)    (n^[2], n^[1])      (n^[2], 1)
+
+    Cost function: J(W^[1], b^[1], W^[2], b^[2]) = 1/m * sum( Loss(y_hat, y) ), Y_hat == A^[2]
+
+    Gradient Descent:
+        Initialize parameters (randomly, to break the symmetry)
+        Repeat until convergence:
+            Compute predictions: Y_hat (made out of every y_hat^(i) on the training set)
+
+            dW^[1] = del/delW^[1](J(...))
+            db^[1] = del/delb^[1](J(...))
+            ...
+
+            W^[1] := W^[1] - Alpha * dW^[1]
+            b^[1] := b^[1] - Alpha * db^[1]
+            ...
+    
+    Formulas for computing derivatives:
+        Forward propagation recap:
+            Z^[1]   = W^[1] dot X + b^[1]               # or A^[0] = X
+            A^[1]   = g^[1](Z^[1])
+            Z^[2]   = W^[2] dot A^[1] + b^[2]
+            A^[2]   = g^[2](Z^[2])
+                    = sigmoid(Z^[2])   # if we're doing binary classification
+
+        Backpropagation:
+            dZ^[2] = A^[2] - Y          # this assumes sigmoid is used for the output layer
+            dW^[2] = 1/m * np.dot(dZ^[2], A^[1].T)
+            db^[2] = 1/m * np.sum(dZ^[2], axis = 1, keepdims = True)
+                # keepdims = True prevents the reduction to rank-1 numpy arrays
+
+            dZ^[1] = np.dot(W^[2].T, dZ[2]) * g^[1]'(Z^[1])     # * is element-wise product (Hadamard product)
+            dW^[1] = 1/m * np.dot(dZ^[1], X.T)
+            db^[1] = 1/m * np.sum(dZ^[1], axis = 1, keepdims = True)
+
+L10 - Backpropagation Intuition
+    Logistic Regression gradients recap
+        on single training example,
+        Computation graph, chain rule
+    
+    2 layer NN:
+        input: x, W^[1], b^[1]
+        forward propagation:
+            z^[1] = W^[1] dot x + b^[1]
+            a^[1] = g^[1](z^[1])
+            z^[2] = W^[2] dot x + b^[2]
+            a^[2] = sigmoid(z^[2])
+            Loss(a^[2], y)
+        
+        backpropagation:
+            da^[2] = skip                               # analogous
+            dz^[2] = a^[2] - y                          # to
+                dW^[2] = np.dot(dz^[2], a^[1].T)        # logistic
+                db^[2] = dz^[2]                         # regression
+
+            da^[1] = skip
+            dz^[1] = np.dot( W^[2].T    ,   dz^[2] ) * g^[1]'(z^[1])
+shape:    (n^[1], 1)     (n^[1], n^[2])   (n^[2], 1)        (n^[1], 1)          # sanity check
+
+            dW^[1] = np.dot(dz^[1], x.T)
+            db^[1] = dz^[1]
+
+            >>> The derivation for dz^[1]:
+                dz^[1]  =           da^[1]                                * g^[1]`(z^[1]) =
+                        =      (dz^[2]/da^[1])                 dot dz^[2] * g^[1]`(z^[1]) =
+                        = (d(W^[2] dot a^[1] + b^[2]])/da^[1]) dot dz^[2] * g^[1]`(z^[1]) =
+                        =    W^[2]T                            dot dz^[2] * g^[1]`(z^[1])
+                where:
+                    dot is matrix multiplication (np.dot()),
+                    * is element-wise (Hadamard) product.
+    
+    Vectorization review
+
+L11 - Random Initialization
+    If we use zero-initialization, or generally symmetric initialization for W parameters,
+        each neuron in a layer will start from the same point,
+        and compute the same function,
+        and have the same gradient,
+        and descend to the same values,
+        so all neurons in a layer are the same,
+        => so it's like we have one neuron per layer.
+
+    Random initialization solves this problem by breaking this symmetry.
+    b parameters can be zero-initialized, because W already broke the symmetry
+
+    In code:
+        W[j] = np.random.rand((n[j], n[j-1])) * 0.01
+
+    Why 0.01 i.e. why a small number, why not * 100?
+        If we're using tanh or sigmoid activation function, even just at the output layer
+        if we start with large weights,
+        we are more likely to end up at those areas where tanh and sigmoid have very small derivatives,
+        which leads to slower learning.
+
+        If we don't have any such activation functions in your neural network, we don't have to worry about this, any number will do.
+
+        * 0.01 will work fine for shallow NNs
+        but for Deep NNs, there are numbers better than 0.01.
+        More on that, next week.
+        
+
+
+==================================================================================================
+============================================= WEEK 4 =============================================
+==================================================================================================
+
+L01 - Deep L-Layer Neural Network
+    What is a deep neural network?
+        "Shallow" vs "Deep"
+    
+        Deeper networks compute more complex functions
+        and are therefore able to fit more complex models
+    
+    DNN notation:
+        just like the previous
+            n^[l]   - #units in layer l
+                n^[0] = n_x
+            a^[l]   - activations in layer l (for a single input/training example)
+            W^[l], b^[l]    - weights and biases in layer l
+            z^[l] = W^[l] dot a^[l-1] + b^[l]
+            g^[l](z^[l])    - the activation function for neurons in layer l
+
+L02 - Forward Propagation in a DNN
+    Example 4L DNN drawn:
+        l    :  0   1   2   3   4
+        n^[l]:  3 - 5 - 5 - 3 - 1
+        type :  I - H - H - H - O
+
+    For a single training example:
+        z^[1] = W^[1] dot x     + b^[1]     , or equivalently
+        z^[1] = W^[1] dot a^[0] + b^[1]
+        a^[1] = g^[1](z^[1])
+        ...
+        z^[L] = W^[L] dot a^[L-1] + b^[L]
+        a^[L] = g^[L](z^[L])
+
+    where L is the number of layers of the network
+
+    More compactly written:
+        a^[0] = x
+        for l in range(1, L+1):
+            z^[l] = W^[l] dot a^[l-1] + b^[l]
+            a^[l] = g^[l](z^[l])
+
+
+    Vectorized forward propagation for the entire training set:
+        A^[0] = X
+        for l in range(1, L+1):
+            Z^[l] = W^[l] dot A^[l-1] + b^[l]
+            A^[l] = g^[l](Z^[l])
+
+L03 - Getting Matrix Dimensions Right
+    A quick sanity checking technique is to check if all matrix dimensions match correctly.
+    
+    Example 5L DNN drawn:
+        l    :  0   1   2   3   4   5
+        n^[l]:  2 - 3 - 5 - 4 - 2 - 1
+        type :  I - H - H - H - H - O
+
+    Forward propagation:
+         A^[0]     =   X
+shape:  (n^[0], m) = (n^[0], m)
+
+        for l in range(1, L+1):
+            Z^[l]     =  W^[l]           dot  A^[l-1]     +  b^[l]
+shape:     (n^[l], m) = (n^[l], n^[l-1]) dot (n^[l-1], m) + (n^[l], 1)
+
+            A^[l]     = g^[l](Z^[l])
+shape:     (n^[l], m) =      (n^[l], m)
+        
+    So the dimensions of all matrices are:
+        W^[l].shape = (n^[l], n^[l-1])
+        b^[l].shape = (n^[l], 1)
+        Z^[l].shape = (n^[l], m)
+        A^[l].shape = (n^[l], m)
+
+L04 - Why Deep Representations?
+    Why do they need to be deep?
+    Why not just big (more neurons in hidden layers)?
+
+    Visualization of layers of face detection NN (CNN):
+        layer^[1] detects simple features,  via fitting simpler functions
+        layer^[2] small parts of a face,    via fitting more complex functions
+        layer^[3] larger parts of a face,   via fitting even more complex functions
+        
+        or similar thing in audio
+    
+    => the deeper the layer is, it can fit more complex functions
+
+    Circuit theory and deep learning
+        Informally: There are functions you can compute with a "small" L-layer DNN
+        that shallower networks require exponentially more hidden units to compute.
+
+        y = x_1 XOR x_2 XOR ... XOR x_n
+            DNN can compute this with O(n) nodes
+            1-layer NN would need O(2^n) nodes (it should around 2^(n-1))
+
+    
+    Another reason why Deep Learning and Deep Neural Nets have taken off is the name itself.
+    It has become a cool buzzword, and since DNNs are basically just NNs with more layers,
+    the terms like Deep Neural Network, Deep Learning etc. are just powerful PR and great rebranding.
+
+    Deep networks work well, but
+    When building a new model, don't try DNNs first.
+    Start simple, with Logistic Regression.
+    Then, if you need, add a layer or two.
+    Then, if you need, add more layers, and use the number of layers as a "hyperparameter".
+
+
+L05 - Building Blocks of a Deep Neural Network
+    A look at a single layer and associated computations
+        Forward propagation
+            input A^[l-1], output A^[l]:
+                Z^[l] = W^[l] dot A^[l-1] + b^[l]
+                A^[l] = g^[l](Z^[l])
+                cache Z^[l]
+            
+        Backpropagation:
+            input dA^[l], cached Z^[l],
+            output dA^[l-1], (dZ^[l]), dW^[l], db^[l]:
+
+        Computation graph
+
+        W^[l] := W^[l] - Alpha * dW^[l]
+        b^[l] := b^[l] - Alpha * db^[l]
+
+L06 - Forward and Backward Propagation
+    Forward prop recap:
+        A^[0] = X       # initialization
+        for l in range(1, L+1):
+            Z^[l] = W^[l] dot A^[l-1] + b^[l]
+            A^[l] = g^[l](Z^[l])
+            cache Z^[l], A^[l]
+
+
+    Backpropagation
+        dA^[L] = -Y/A + (1-Y)/(1-A)     # / are element-wise functions
+        for l in range(L, -1, -1):
+            dZ^[l] = dA^[l] * g^[l] ' (Z^[l])
+            dW^[l] = 1/m * dZ^[l] dot A^[l-1]
+            db^[l] = 1/m * np.sum(dZ^[l], axis = 1, keepdims = True)
+            dA^[l-1] = W^[l]T dot dZ^[l]
+
+            (explicitly: dZ^[l] = (W^[l+1]T dot dZ^[l+1]) * g^[l] ' (Z^[l])         )
+
+    Summary:
+        Computation graph
+    
+    It's a kind of magic, magic, magic, MAAAGIIIIC
+
+L07 - Parameters vs Hyper Parameters
+    Parameters
+        parameters of a model are the things you can estimate from data, you don't tune them manually.
+        They are internal parts of the training process.
+        Examples:
+            - weights and biases of a NN.
+        
+    Hyperparameters
+        parameters external to the training process.
+        They are the things you choose and tune manualy.
+        Examples:
+            - learning rate,
+            - regularization parameter,
+            - number of iterations/epochs,
+            - number of hidden layers,
+            - neurons per layer,
+            - activation functions...
+
+    Hyperparameters influence parameters.
+    Parameters don't influence hyperparameters.
+
+    Applied deep learning is a very empirical process
+        We pick hyperparameters by trying multiple different ones,
+        and pick the best one by observing the      Learning Curves,
+        and evaluating them over a hold-out cross-validation set.
+    
+    Deep learning is applied to many different problems.
+        Intuitions don't carry over from one application to another
+        Also:
+            The systems also evolve over time,
+            the optimal parameters might change over time as well.
+
+L08 - What does this have to do with the brain?
+    Note a whole lot.
+    It kind of resembles the brain and it might have inspired early NN researchers.
+    But even biologists don't completely understand how brain works.
+    It probably doesn't use forward and backward propagation as we do in ML.
+    So it isn't a usefull analogy.
